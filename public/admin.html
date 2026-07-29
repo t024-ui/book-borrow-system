@@ -56,6 +56,17 @@
       font-size: 0.75rem; font-weight: 600; margin-right: 4px; margin-bottom: 2px;
     }
     .badge-blue { background: #ebf8ff; color: #2b6cb0; }
+    .badge-green { background: #f0fff4; color: #276749; }
+    .badge-orange { background: #fffaf0; color: #c05621; }
+    .seq { display: inline-block; width: 20px; height: 20px; line-height: 20px; border-radius: 50%; background: #4299e1; color: #fff; font-size: 0.7rem; text-align: center; margin-right: 4px; }
+    .btn-del {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 16px; height: 16px; border-radius: 50%;
+      border: none; background: #fc8181; color: #fff;
+      font-size: 0.65rem; cursor: pointer; margin-left: 4px;
+      line-height: 1; padding: 0; vertical-align: middle;
+    }
+    .btn-del:hover { background: #e53e3e; }
   </style>
 </head>
 <body>
@@ -70,6 +81,24 @@
   <div class="card">
     <h2>統計概覽</h2>
     <div class="stats" id="statsBox"></div>
+  </div>
+
+  <div class="card">
+    <h2>書箱借出順序（依登記時間）</h2>
+    <p style="font-size:0.85rem;color:#718096;margin-bottom:8px;">同本書箱有多班登記時，編號小者優先借出</p>
+    <div style="overflow-x:auto;">
+      <table id="orderTable">
+        <thead>
+          <tr>
+            <th>書箱名稱</th>
+            <th>借出班級</th>
+            <th>登記班級（依時間排序）</th>
+            <th>登記數</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
   </div>
 
   <div class="card">
@@ -101,6 +130,16 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 function $(id) { return document.getElementById(id); }
 
+async function deleteSelection(id) {
+  if (!confirm('確定刪除此登記紀錄？此班級將從排隊名單移除。')) return;
+  const { error } = await supabaseClient.from('class_book_selections').delete().eq('id', id);
+  if (error) {
+    alert('刪除失敗：' + error.message);
+  } else {
+    loadData();
+  }
+}
+
 async function loadData() {
   try {
     const { data: selections, error } = await supabaseClient
@@ -128,7 +167,7 @@ async function loadData() {
       <div class="stat-box"><div class="num">${(totalSelections / Math.max(totalClasses, 1)).toFixed(1)}</div><div class="label">平均每人本數</div></div>
     `;
     
-    // Table
+    // Table - by class
     const tbody = $('dataTable').querySelector('tbody');
     tbody.innerHTML = Object.entries(classMap).map(([clsName, data]) => `
       <tr>
@@ -137,6 +176,59 @@ async function loadData() {
         <td>${data.times[0]}</td>
       </tr>
     `).join('');
+    
+    // Order table - by book box
+    const boxMap = {};
+    selections.forEach(s => {
+      const boxName = s.book_boxes?.name || '(未知)';
+      const clsName = s.classes?.name || '(未知)';
+      if (!boxMap[boxName]) boxMap[boxName] = [];
+      boxMap[boxName].push({
+        id: s.id,
+        clsName,
+        time: new Date(s.created_at).toLocaleString('zh-TW')
+      });
+    });
+    // Sort each book box's entries by time
+    Object.values(boxMap).forEach(arr => arr.sort((a, b) => new Date(a.time) - new Date(b.time)));
+
+    // Greedy assignment: each class can borrow at most one book box at a time
+    const bookList = Object.entries(boxMap).map(([boxName, entries]) => ({
+      boxName, entries,
+      earliestTime: entries.length > 0 ? new Date(entries[0].time) : Infinity
+    }));
+    bookList.sort((a, b) => a.earliestTime - b.earliestTime);
+
+    const assignedBorrowers = new Set();
+    const borrowerMap = {};
+    bookList.forEach(book => {
+      const entry = book.entries.find(e => !assignedBorrowers.has(e.clsName));
+      if (entry) {
+        borrowerMap[book.boxName] = entry.clsName;
+        assignedBorrowers.add(entry.clsName);
+      } else {
+        borrowerMap[book.boxName] = null;
+      }
+    });
+
+    const orderTbody = $('orderTable').querySelector('tbody');
+    orderTbody.innerHTML = Object.entries(boxMap).map(([boxName, entries]) => {
+      const borrower = borrowerMap[boxName] || '—';
+      const clsBadges = entries.map((e, i) => {
+        let badgeClass = 'badge-green';
+        if (i === 0) badgeClass = 'badge-blue';
+        if (i >= 2) badgeClass = 'badge-orange';
+        return `<span class="badge ${badgeClass}"><span class="seq">${i+1}</span>${e.clsName}<button class="btn-del" onclick="deleteSelection('${e.id}')" title="刪除">×</button></span>`;
+      }).join('');
+      return `
+        <tr>
+          <td><strong>${boxName}</strong></td>
+          <td><span class="badge badge-blue">${borrower}</span></td>
+          <td>${clsBadges}</td>
+          <td>${entries.length}</td>
+        </tr>
+      `;
+    }).join('');
     
   } catch (err) {
     console.error(err);

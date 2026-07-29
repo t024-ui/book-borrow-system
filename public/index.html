@@ -72,7 +72,7 @@
     .book-item input[type="checkbox"] {
       width: 18px; height: 18px; margin-top: 2px; cursor: pointer; flex-shrink: 0;
     }
-    .book-item label { cursor: pointer; font-size: 0.95rem; line-height: 1.4; }
+    .book-item span { font-size: 0.95rem; line-height: 1.4; }
 
     .counter {
       text-align: center; padding: 10px; font-size: 1rem; font-weight: 600;
@@ -172,7 +172,7 @@
       <h3>登記成功！</h3>
       <p>班級：<strong id="resultClassName"></strong></p>
       <ul class="selected-list" id="resultList"></ul>
-      <button class="btn btn-outline" onclick="resetAll()">再登記一次</button>
+      <button class="btn btn-outline" onclick="resetAll()">還書後再登記一本</button>
     </div>
   </div>
 
@@ -239,7 +239,7 @@ function renderBookGrid() {
   grid.innerHTML = bookBoxes.map((box, idx) => `
     <div class="book-item" onclick="toggleBook('${box.id}', this)">
       <input type="checkbox" id="cb-${idx}" value="${box.id}" onchange="syncCheckbox('${box.id}', this)">
-      <label for="cb-${idx}">${box.name}</label>
+      <span>${box.name}</span>
     </div>
   `).join('');
 }
