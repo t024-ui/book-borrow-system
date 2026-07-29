@@ -108,12 +108,29 @@
 <div class="container">
 
   <div class="class-selector">
-    <label for="gradeSelect">選擇班級</label>
+    <label>選擇班級</label>
     <select id="gradeSelect">
       <option value="">年級</option>
+      <option value="一">一</option>
+      <option value="二">二</option>
+      <option value="三">三</option>
+      <option value="四">四</option>
+      <option value="五">五</option>
+      <option value="六">六</option>
     </select>
     <select id="classSelect">
       <option value="">班級</option>
+      <option value="甲">甲</option>
+      <option value="乙">乙</option>
+      <option value="丙">丙</option>
+      <option value="丁">丁</option>
+      <option value="戊">戊</option>
+      <option value="己">己</option>
+      <option value="庚">庚</option>
+      <option value="辛">辛</option>
+      <option value="和">和</option>
+      <option value="平">平</option>
+      <option value="仁">仁</option>
     </select>
   </div>
 
@@ -158,7 +175,6 @@ function localDateStr(d) {
 }
 
 async function loadData() {
-  renderSelects();
   const [boxesRes, classesRes, borrowRes, queueRes] = await Promise.all([
     supabase.from('book_boxes').select('*').order('name'),
     supabase.from('classes').select('*').order('name'),
@@ -172,20 +188,6 @@ async function loadData() {
   waitingQueues = queueRes.data || [];
   renderBoxes();
   renderCurrentStatus();
-}
-
-function renderSelects() {
-  const gs = $('gradeSelect');
-  const currentGrade = gs.value;
-  gs.innerHTML = '<option value="">年級</option>' +
-    GRADE_NAMES.map(g => `<option value="${g}">${g}</option>`).join('');
-  gs.value = currentGrade;
-
-  const cs = $('classSelect');
-  const currentClass = cs.value;
-  cs.innerHTML = '<option value="">班級</option>' +
-    CLASS_NAMES.map(c => `<option value="${c}">${c}</option>`).join('');
-  cs.value = currentClass;
 }
 
 function getActiveBorrow(classId) {
