@@ -85,7 +85,7 @@
 
   <div class="card">
     <h2>書箱借出順序（依登記時間）</h2>
-    <p style="font-size:0.85rem;color:#718096;margin-bottom:8px;">同本書箱有多班登記時，編號小者優先借出</p>
+    <p style="font-size:0.85rem;color:#718096;margin-bottom:8px;">同本書箱有多班登記時，最新登記優先借出（編號大者優先）</p>
     <div style="overflow-x:auto;">
       <table id="orderTable">
         <thead>
@@ -189,7 +189,7 @@ async function loadData() {
         time: new Date(s.created_at).toLocaleString('zh-TW')
       });
     });
-    // Sort each book box's entries by time
+    // Sort each book box's entries by time ascending (earliest first)
     Object.values(boxMap).forEach(arr => arr.sort((a, b) => new Date(a.time) - new Date(b.time)));
 
     // Greedy assignment: each class can borrow at most one book box at a time
@@ -202,7 +202,7 @@ async function loadData() {
     const assignedBorrowers = new Set();
     const borrowerMap = {};
     bookList.forEach(book => {
-      const entry = book.entries.find(e => !assignedBorrowers.has(e.clsName));
+      const entry = [...book.entries].reverse().find(e => !assignedBorrowers.has(e.clsName));
       if (entry) {
         borrowerMap[book.boxName] = entry.clsName;
         assignedBorrowers.add(entry.clsName);
