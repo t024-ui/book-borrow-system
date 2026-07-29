@@ -175,20 +175,30 @@ function localDateStr(d) {
 }
 
 async function loadData() {
-  const [boxesRes, classesRes, borrowRes, queueRes] = await Promise.all([
-    supabase.from('book_boxes').select('*').order('name'),
-    supabase.from('classes').select('*').order('name'),
-    supabase.from('borrow_records').select('*').order('borrow_date', { ascending: false }),
-    supabase.from('waiting_queue').select('*').order('queue_order')
-  ]);
-  if (boxesRes.error) { console.error(boxesRes.error); return; }
-  bookBoxes = boxesRes.data;
-  classes = classesRes.data || [];
-  borrowRecords = borrowRes.data || [];
-  waitingQueues = queueRes.data || [];
-  updateSelection();
-  renderBoxes();
-  renderCurrentStatus();
+  $('currentStatus').innerHTML = '<h2>目前借用</h2><div class="status-card none">載入中...</div>';
+  try {
+    const [boxesRes, classesRes, borrowRes, queueRes] = await Promise.all([
+      supabase.from('book_boxes').select('*').order('name'),
+      supabase.from('classes').select('*').order('name'),
+      supabase.from('borrow_records').select('*').order('borrow_date', { ascending: false }),
+      supabase.from('waiting_queue').select('*').order('queue_order')
+    ]);
+    if (boxesRes.error || classesRes.error) {
+      console.error('DB Error:', boxesRes.error || classesRes.error);
+      $('currentStatus').innerHTML = '<h2>目前借用</h2><div class="status-card none" style="color:#fc8181;">資料載入失敗，請重新整理頁面</div>';
+      return;
+    }
+    bookBoxes = boxesRes.data || [];
+    classes = classesRes.data || [];
+    borrowRecords = borrowRes.data || [];
+    waitingQueues = queueRes.data || [];
+    updateSelection();
+    renderBoxes();
+    renderCurrentStatus();
+  } catch (err) {
+    console.error('Load error:', err);
+    $('currentStatus').innerHTML = '<h2>目前借用</h2><div class="status-card none" style="color:#fc8181;">連線失敗，請重新整理頁面</div>';
+  }
 }
 
 function getActiveBorrow(classId) {
@@ -369,8 +379,10 @@ function updateSelection() {
   const grade = $('gradeSelect').value;
   const cls = $('classSelect').value;
   if (grade && cls) {
-    const found = classes.find(c => c.name === grade + cls);
+    const targetName = grade + cls;
+    const found = classes.find(c => c.name === targetName);
     selectedClassId = found ? found.id : null;
+    console.log('Selected grade=' + grade + ', class=' + cls + ', target=' + targetName + ', found=' + (found ? found.name : 'NOT FOUND') + ', classes.length=' + classes.length);
   } else {
     selectedClassId = null;
   }
