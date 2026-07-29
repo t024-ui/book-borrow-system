@@ -186,6 +186,7 @@ async function loadData() {
   classes = classesRes.data || [];
   borrowRecords = borrowRes.data || [];
   waitingQueues = queueRes.data || [];
+  updateSelection();
   renderBoxes();
   renderCurrentStatus();
 }
