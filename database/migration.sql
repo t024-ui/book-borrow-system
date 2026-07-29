@@ -107,6 +107,21 @@ CREATE POLICY "允許公開新增佇列" ON waiting_queue FOR INSERT WITH CHECK 
 CREATE POLICY "允許公開更新佇列" ON waiting_queue FOR UPDATE USING (true);
 CREATE POLICY "允許公開刪除佇列" ON waiting_queue FOR DELETE USING (true);
 
+-- 班級選書登記表
+CREATE TABLE class_book_selections (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  class_id UUID NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+  book_box_id UUID NOT NULL REFERENCES book_boxes(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(class_id, book_box_id)
+);
+CREATE INDEX idx_selections_class ON class_book_selections(class_id);
+CREATE INDEX idx_selections_book ON class_book_selections(book_box_id);
+ALTER TABLE class_book_selections ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "允許公開讀取選書" ON class_book_selections FOR SELECT USING (true);
+CREATE POLICY "允許公開新增選書" ON class_book_selections FOR INSERT WITH CHECK (true);
+CREATE POLICY "允許公開刪除選書" ON class_book_selections FOR DELETE USING (true);
+
 -- ============================================
 -- 115上愛的書庫預約書單（從 Excel 匯入）
 -- ============================================

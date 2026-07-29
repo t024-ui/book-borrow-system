@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理者總表 - 115上愛的書庫預約書單</title>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", sans-serif;
+      background: #f0f4f8; color: #1a202c; min-height: 100vh;
+    }
+    .header {
+      background: linear-gradient(135deg, #2b6cb0, #2c5282);
+      color: #fff; padding: 20px; text-align: center;
+    }
+    .header h1 { font-size: 1.3rem; }
+    .header p { font-size: 0.8rem; opacity: 0.85; margin-top: 4px; }
+    .container { max-width: 900px; margin: 0 auto; padding: 16px; }
+
+    .card {
+      background: #fff; border-radius: 12px; padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 16px;
+    }
+    .card h2 { font-size: 1.1rem; margin-bottom: 12px; color: #2d3748; }
+
+    .stats {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px; margin-bottom: 16px;
+    }
+    .stat-box {
+      background: #ebf8ff; border-radius: 8px; padding: 12px; text-align: center;
+    }
+    .stat-box .num { font-size: 1.4rem; font-weight: 700; color: #4299e1; }
+    .stat-box .label { font-size: 0.8rem; color: #718096; }
+
+    table {
+      width: 100%; border-collapse: collapse; font-size: 0.9rem;
+    }
+    th, td {
+      padding: 10px 8px; text-align: left; border-bottom: 1px solid #e2e8f0;
+    }
+    th {
+      background: #f7fafc; font-weight: 600; color: #2d3748; position: sticky; top: 0;
+    }
+    tr:hover { background: #f7fafc; }
+    .back-link {
+      text-align: center; margin-top: 16px;
+    }
+    .back-link a {
+      color: #4299e1; text-decoration: none; font-size: 0.9rem;
+    }
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 12px;
+      font-size: 0.75rem; font-weight: 600; margin-right: 4px; margin-bottom: 2px;
+    }
+    .badge-blue { background: #ebf8ff; color: #2b6cb0; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>115上愛的書庫預約書單 - 管理者總表</h1>
+  <p>查看各班級登記的書籍</p>
+</div>
+
+<div class="container">
+
+  <div class="card">
+    <h2>統計概覽</h2>
+    <div class="stats" id="statsBox"></div>
+  </div>
+
+  <div class="card">
+    <h2>各班級登記明細</h2>
+    <div style="overflow-x:auto;">
+      <table id="dataTable">
+        <thead>
+          <tr>
+            <th>班級</th>
+            <th>登記書籍</th>
+            <th>登記時間</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="back-link">
+    <a href="index.html">← 回到登記頁面</a>
+  </div>
+
+</div>
+
+<script>
+const SUPABASE_URL = 'https://dwfrqidfhpixqsjmdqzz.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR3ZnJxaWRmaHBpeHFzam1kcXp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUyMTkzOTIsImV4cCI6MjEwMDc5NTM5Mn0.E28yPEnnONmNyKb0fRVFmp5K-_jPvf9mq8SK9j7-lN0';
+const supabaseClient = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function $(id) { return document.getElementById(id); }
+
+async function loadData() {
+  try {
+    const { data: selections, error } = await supabaseClient
+      .from('class_book_selections')
+      .select('id, class_id, book_box_id, created_at, classes(name), book_boxes(name)')
+      .order('created_at', { ascending: false });
+    
+    if (error) { console.error(error); return; }
+    
+    // Group by class
+    const classMap = {};
+    selections.forEach(s => {
+      const clsName = s.classes?.name || '(未知)';
+      if (!classMap[clsName]) classMap[clsName] = { books: [], times: [] };
+      classMap[clsName].books.push(s.book_boxes?.name || '(未知)');
+      classMap[clsName].times.push(new Date(s.created_at).toLocaleString('zh-TW'));
+    });
+    
+    // Stats
+    const totalClasses = Object.keys(classMap).length;
+    const totalSelections = selections.length;
+    $('statsBox').innerHTML = `
+      <div class="stat-box"><div class="num">${totalClasses}</div><div class="label">登記班級數</div></div>
+      <div class="stat-box"><div class="num">${totalSelections}</div><div class="label">總登記本數</div></div>
+      <div class="stat-box"><div class="num">${(totalSelections / Math.max(totalClasses, 1)).toFixed(1)}</div><div class="label">平均每人本數</div></div>
+    `;
+    
+    // Table
+    const tbody = $('dataTable').querySelector('tbody');
+    tbody.innerHTML = Object.entries(classMap).map(([clsName, data]) => `
+      <tr>
+        <td><strong>${clsName}</strong></td>
+        <td>${data.books.map(b => `<span class="badge badge-blue">${b}</span>`).join('')}</td>
+        <td>${data.times[0]}</td>
+      </tr>
+    `).join('');
+    
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+loadData();
+</script>
+</body>
+</html>

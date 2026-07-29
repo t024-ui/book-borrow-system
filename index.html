@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>115上愛的書庫預約書單 - 借還書系統</title>
+  <title>115上愛的書庫預約書單 - 班級選書登記</title>
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -15,81 +15,94 @@
       background: linear-gradient(135deg, #2b6cb0, #2c5282);
       color: #fff; padding: 20px; text-align: center;
     }
-    .header h1 { font-size: 1.5rem; font-weight: 700; }
-    .header p { font-size: 0.9rem; opacity: 0.85; margin-top: 4px; }
-    .container { max-width: 960px; margin: 0 auto; padding: 16px; }
+    .header h1 { font-size: 1.4rem; font-weight: 700; }
+    .header p { font-size: 0.85rem; opacity: 0.85; margin-top: 4px; }
+    .container { max-width: 900px; margin: 0 auto; padding: 16px; }
 
-    .class-selector {
-      background: #fff; border-radius: 12px; padding: 16px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 16px;
-      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    .step-bar {
+      display: flex; justify-content: center; gap: 8px; margin-bottom: 16px;
     }
-    .class-selector label { font-weight: 600; font-size: 1rem; }
-    .class-selector select {
-      flex: 1; min-width: 160px; padding: 8px 12px; font-size: 1rem;
+    .step {
+      padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;
+      background: #e2e8f0; color: #718096;
+    }
+    .step.active { background: #4299e1; color: #fff; }
+    .step.done { background: #48bb78; color: #fff; }
+
+    .card {
+      background: #fff; border-radius: 12px; padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 16px;
+    }
+    .card h2 { font-size: 1.1rem; margin-bottom: 12px; color: #2d3748; }
+
+    .form-row {
+      display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 12px;
+    }
+    .form-row label { font-weight: 600; font-size: 1rem; white-space: nowrap; }
+    .form-row select {
+      flex: 1; min-width: 120px; padding: 8px 12px; font-size: 1rem;
       border: 1px solid #cbd5e0; border-radius: 8px; background: #fff;
     }
-
-    .status-card {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 12px 16px; border-radius: 8px; flex-wrap: wrap; gap: 8px;
-    }
-    .status-card.borrowed { background: #ebf8ff; border: 1px solid #bee3f8; }
-    .status-card.none { background: #f7fafc; border: 1px solid #e2e8f0; color: #718096; }
-
-    .box-grid { display: flex; flex-direction: column; gap: 8px; }
-    .box-card {
-      background: #fff; border-radius: 10px; padding: 14px 16px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      display: flex; align-items: center; justify-content: space-between;
-      flex-wrap: wrap; gap: 8px; border-left: 4px solid #48bb78;
-    }
-    .box-card.busy { border-left-color: #ed8936; }
-    .box-card.mine { border-left-color: #4299e1; background: #ebf8ff; }
-    .box-info { flex: 1; min-width: 200px; }
-    .box-name { font-weight: 600; font-size: 1rem; }
-    .box-meta { font-size: 0.85rem; color: #718096; margin-top: 2px; }
-    .box-actions { display: flex; gap: 6px; flex-wrap: wrap; }
     .btn {
-      padding: 6px 16px; border: none; border-radius: 6px; font-size: 0.9rem;
+      padding: 8px 20px; border: none; border-radius: 8px; font-size: 1rem;
       cursor: pointer; font-weight: 600; transition: opacity 0.2s;
     }
     .btn:hover { opacity: 0.85; }
     .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .btn-primary { background: #48bb78; color: #fff; }
-    .btn-danger { background: #fc8181; color: #fff; }
-    .btn-warning { background: #ed8936; color: #fff; }
+    .btn-primary { background: #4299e1; color: #fff; }
+    .btn-success { background: #48bb78; color: #fff; }
     .btn-outline { background: #e2e8f0; color: #4a5568; }
-    .btn-sm { padding: 4px 12px; font-size: 0.85rem; }
 
-    .queue-section { margin-top: 16px; }
-    .queue-section h3 { font-size: 1rem; color: #2d3748; margin-bottom: 8px; }
-    .queue-item {
-      display: flex; align-items: center; gap: 8px; padding: 6px 12px;
-      background: #fff; border-radius: 6px; margin-bottom: 4px;
-      font-size: 0.9rem; border: 1px solid #e2e8f0;
+    .hint {
+      font-size: 0.9rem; color: #718096; margin-bottom: 12px;
     }
-    .queue-pos {
-      background: #4299e1; color: #fff; border-radius: 50%;
-      width: 24px; height: 24px; display: flex; align-items: center;
-      justify-content: center; font-size: 0.75rem; font-weight: 700;
-      flex-shrink: 0;
-    }
-    .queue-me { background: #ebf8ff; border-color: #4299e1; font-weight: 600; }
+    .hint strong { color: #ed8936; }
 
-    .toast {
-      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-      padding: 12px 24px; border-radius: 8px; color: #fff; font-weight: 600;
-      z-index: 1000; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    .book-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 10px;
     }
-    .toast.success { background: #48bb78; }
-    .toast.error { background: #fc8181; }
+    .book-item {
+      display: flex; align-items: flex-start; gap: 8px;
+      padding: 10px 12px; border-radius: 8px; border: 2px solid #e2e8f0;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .book-item:hover { border-color: #4299e1; background: #ebf8ff; }
+    .book-item.selected { border-color: #48bb78; background: #f0fff4; }
+    .book-item input[type="checkbox"] {
+      width: 18px; height: 18px; margin-top: 2px; cursor: pointer; flex-shrink: 0;
+    }
+    .book-item label { cursor: pointer; font-size: 0.95rem; line-height: 1.4; }
+
+    .counter {
+      text-align: center; padding: 10px; font-size: 1rem; font-weight: 600;
+      color: #2d3748;
+    }
+    .counter .num { color: #4299e1; font-size: 1.3rem; }
+
+    .result-box {
+      text-align: center; padding: 30px 20px;
+    }
+    .result-box .icon { font-size: 3rem; margin-bottom: 12px; }
+    .result-box h3 { font-size: 1.3rem; color: #2d3748; margin-bottom: 8px; }
+    .result-box p { color: #718096; font-size: 0.95rem; }
+    .result-box .selected-list {
+      text-align: left; max-width: 400px; margin: 16px auto;
+      background: #f7fafc; border-radius: 8px; padding: 12px 16px;
+    }
+    .result-box .selected-list li { padding: 4px 0; font-size: 0.95rem; }
+
+    .admin-link {
+      text-align: center; margin-top: 20px;
+    }
+    .admin-link a {
+      color: #4299e1; text-decoration: none; font-size: 0.9rem;
+    }
+    .admin-link a:hover { text-decoration: underline; }
 
     @media (max-width: 600px) {
       .header h1 { font-size: 1.2rem; }
-      .container { padding: 8px; }
-      .box-card { flex-direction: column; align-items: stretch; }
-      .box-actions { justify-content: flex-end; }
+      .book-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -97,283 +110,213 @@
 
 <div class="header">
   <h1>115上愛的書庫預約書單</h1>
-  <p>班級借還書箱登記系統</p>
+  <p>班級選書登記系統（每人限選 1-3 本）</p>
 </div>
 
 <div class="container">
 
-  <div class="class-selector">
-    <label>選擇班級</label>
-    <select id="gradeSelect">
-      <option value="">年級</option>
-      <option value="一">一</option>
-      <option value="二">二</option>
-      <option value="三">三</option>
-      <option value="四">四</option>
-      <option value="五">五</option>
-      <option value="六">六</option>
-    </select>
-    <select id="classSelect">
-      <option value="">班級</option>
-      <option value="甲">甲</option>
-      <option value="乙">乙</option>
-      <option value="丙">丙</option>
-      <option value="丁">丁</option>
-      <option value="戊">戊</option>
-      <option value="己">己</option>
-      <option value="庚">庚</option>
-      <option value="辛">辛</option>
-      <option value="和">和</option>
-      <option value="平">平</option>
-      <option value="仁">仁</option>
-    </select>
+  <div class="step-bar">
+    <div class="step active" id="step1">1. 選擇班級</div>
+    <div class="step" id="step2">2. 挑選書籍</div>
+    <div class="step" id="step3">3. 完成登記</div>
   </div>
 
-  <div id="debugPanel" style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:12px;margin-bottom:16px;font-size:0.85rem;color:#856404;">
-    <strong>系統狀態：</strong> <span id="debugMsg">等待資料載入...</span>
+  <!-- Step 1: Select Class -->
+  <div class="card" id="panel-step1">
+    <h2>請選擇您的班級</h2>
+    <div class="form-row">
+      <label>年級</label>
+      <select id="gradeSelect">
+        <option value="">請選擇</option>
+        <option value="一">一</option>
+        <option value="二">二</option>
+        <option value="三">三</option>
+        <option value="四">四</option>
+        <option value="五">五</option>
+        <option value="六">六</option>
+      </select>
+      <label>班級</label>
+      <select id="classSelect">
+        <option value="">請選擇</option>
+        <option value="甲">甲</option>
+        <option value="乙">乙</option>
+        <option value="丙">丙</option>
+        <option value="丁">丁</option>
+        <option value="戊">戊</option>
+        <option value="己">己</option>
+        <option value="庚">庚</option>
+        <option value="辛">辛</option>
+        <option value="和">和</option>
+        <option value="平">平</option>
+        <option value="仁">仁</option>
+      </select>
+      <button class="btn btn-primary" id="btnConfirm" onclick="confirmClass()">確認送出</button>
+    </div>
   </div>
 
-  <h2 style="font-size:1.1rem; margin-bottom:8px; color:#2d3748;">書箱列表</h2>
-  <div class="box-grid" id="boxGrid"></div>
+  <!-- Step 2: Select Books -->
+  <div class="card" id="panel-step2" style="display:none;">
+    <h2>請勾選想登記的書（1-3 本）</h2>
+    <p class="hint">已選擇班級：<strong id="selectedClassName"></strong>　｜　已選 <strong id="selectedCount">0</strong> / 3 本</p>
+    <div class="book-grid" id="bookGrid"></div>
+    <div style="text-align:center; margin-top:16px;">
+      <button class="btn btn-success" id="btnSubmit" onclick="submitSelection()" disabled>送出登記</button>
+      <button class="btn btn-outline" onclick="resetAll()" style="margin-left:8px;">重新選擇</button>
+    </div>
+  </div>
 
-  <div id="toast" class="toast"></div>
+  <!-- Step 3: Result -->
+  <div class="card" id="panel-step3" style="display:none;">
+    <div class="result-box">
+      <div class="icon">✅</div>
+      <h3>登記成功！</h3>
+      <p>班級：<strong id="resultClassName"></strong></p>
+      <ul class="selected-list" id="resultList"></ul>
+      <button class="btn btn-outline" onclick="resetAll()">再登記一次</button>
+    </div>
+  </div>
+
+  <div class="admin-link">
+    <a href="admin.html">📋 管理者查看登記總表</a>
+  </div>
+
 </div>
 
 <script>
 const SUPABASE_URL = 'https://dwfrqidfhpixqsjmdqzz.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR3ZnJxaWRmaHBpeHFzam1kcXp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUyMTkzOTIsImV4cCI6MjEwMDc5NTM5Mn0.E28yPEnnONmNyKb0fRVFmp5K-_jPvf9mq8SK9j7-lN0';
-window.supabaseClient = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let classes = [];
 let bookBoxes = [];
-let borrowRecords = [];
-let waitingQueues = [];
 let selectedClassId = null;
-
-const GRADE_NAMES = ['一','二','三','四','五','六'];
-const CLASS_NAMES = ['甲','乙','丙','丁','戊','己','庚','辛','和','平','仁'];
+let selectedClassName = '';
+let selectedBooks = new Set();
 
 function $(id) { return document.getElementById(id); }
 
-function showToast(msg, type) {
-  const t = $('toast');
-  t.textContent = msg; t.className = 'toast ' + type; t.style.display = 'block';
-  setTimeout(() => { t.style.display = 'none'; }, 3000);
-}
-
-function localDateStr(d) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-function setDebug(msg) {
-  const el = $('debugMsg');
-  if (el) el.textContent = msg;
-  console.log('[DEBUG]', msg);
-}
-
 async function loadData() {
-  setDebug('正在連線 Supabase...');
   try {
-    const [boxesRes, classesRes, borrowRes, queueRes] = await Promise.all([
-      window.supabaseClient.from('book_boxes').select('*').order('name'),
-      window.supabaseClient.from('classes').select('*').order('name'),
-      window.supabaseClient.from('borrow_records').select('*').order('borrow_date', { ascending: false }),
-      window.supabaseClient.from('waiting_queue').select('*').order('queue_order')
+    const [classesRes, boxesRes] = await Promise.all([
+      supabaseClient.from('classes').select('*').order('name'),
+      supabaseClient.from('book_boxes').select('*').order('name')
     ]);
-    if (boxesRes.error || classesRes.error) {
-      setDebug('資料庫錯誤：' + (boxesRes.error?.message || classesRes.error?.message));
-      return;
-    }
-    bookBoxes = boxesRes.data || [];
     classes = classesRes.data || [];
-    borrowRecords = borrowRes.data || [];
-    waitingQueues = queueRes.data || [];
-    setDebug('載入完成：' + bookBoxes.length + '書箱 / ' + classes.length + '班級');
-    updateSelection();
-    renderBoxes();
+    bookBoxes = boxesRes.data || [];
   } catch (err) {
-    setDebug('連線錯誤：' + err.message);
+    console.error('Load error:', err);
   }
 }
 
-function getActiveBorrow(classId) {
-  return borrowRecords.find(r => r.class_id === classId && r.status === 'borrowed');
-}
-
-function getBoxBorrow(boxId) {
-  return borrowRecords.find(r => r.book_box_id === boxId && r.status === 'borrowed');
-}
-
-function getQueueForBox(boxId) {
-  return waitingQueues.filter(q => q.book_box_id === boxId);
-}
-
-function isInQueue(classId, boxId) {
-  return waitingQueues.some(q => q.class_id === classId && q.book_box_id === boxId);
-}
-
-function getClassById(id) {
-  return classes.find(c => c.id === id);
-}
-
-function renderBoxes() {
-  const grid = $('boxGrid');
-  grid.innerHTML = bookBoxes.map(box => {
-    const borrow = getBoxBorrow(box.id);
-    const isBorrowed = !!borrow;
-    const isMine = borrow && selectedClassId && borrow.class_id === selectedClassId;
-    const queue = getQueueForBox(box.id);
-    const queueIdx = queue.findIndex(q => q.class_id === selectedClassId);
-    const queuePos = queueIdx >= 0 ? queueIdx + 1 : null;
-    const activeBorrow = selectedClassId ? getActiveBorrow(selectedClassId) : null;
-
-    let cardClass = 'box-card';
-    if (isMine) cardClass += ' mine';
-    else if (isBorrowed) cardClass += ' busy';
-
-    let statusText = '';
-    if (isMine) {
-      const d = new Date(borrow.due_date).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' });
-      statusText = `<span style="color:#4299e1;font-weight:600;">✓ 你已借用，到期日 ${d}</span>`;
-    } else if (isBorrowed) {
-      const cls = getClassById(borrow.class_id);
-      const d = new Date(borrow.due_date).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' });
-      statusText = `<span style="color:#ed8936;">${cls ? cls.name : '(未知)'} 借用中，到期 ${d}</span>`;
-    } else {
-      statusText = `<span style="color:#48bb78;font-weight:600;">可借用</span>`;
-    }
-
-    let actions = '';
-    if (isMine) {
-      actions = `<button class="btn btn-danger btn-sm" onclick="returnBox('${borrow.id}')">歸還</button>`;
-    } else if (!isBorrowed) {
-      if (activeBorrow) {
-        actions = `<button class="btn btn-outline btn-sm" disabled>已借別箱</button>`;
-      } else if (selectedClassId) {
-        actions = `<button class="btn btn-primary btn-sm" onclick="borrowBox('${box.id}')">借閱</button>`;
-      } else {
-        actions = `<button class="btn btn-outline btn-sm" disabled>先選班級</button>`;
-      }
-    } else {
-      if (queuePos) {
-        actions = `<span style="font-size:0.85rem;color:#4299e1;">排第 ${queuePos} 順位</span>`;
-      } else if (selectedClassId) {
-        if (activeBorrow) {
-          actions = `<button class="btn btn-outline btn-sm" disabled>已借別箱</button>`;
-        } else {
-          actions = `<button class="btn btn-warning btn-sm" onclick="joinQueue('${box.id}')">排隊</button>`;
-        }
-      } else {
-        actions = `<button class="btn btn-outline btn-sm" disabled>先選班級</button>`;
-      }
-    }
-
-    let queueHtml = '';
-    if (queue.length > 0) {
-      const me = getClassById(selectedClassId);
-      queueHtml = `<div class="queue-section"><h3>排隊順序 (${queue.length})</h3>`;
-      queueHtml += queue.map((q, i) => {
-        const qc = getClassById(q.class_id);
-        const isMe = q.class_id === selectedClassId;
-        return `<div class="queue-item ${isMe ? 'queue-me' : ''}">
-          <span class="queue-pos">${i + 1}</span>
-          <span>${qc ? qc.name : '(未知)'}</span>
-          ${isMe ? '<span style="color:#4299e1;font-weight:600;margin-left:auto;">就是我</span>' : ''}
-        </div>`;
-      }).join('');
-      queueHtml += '</div>';
-    }
-
-    return `<div class="${cardClass}">
-      <div class="box-info">
-        <div class="box-name">${box.name}</div>
-        <div class="box-meta">${statusText}</div>
-        ${queueHtml}
-      </div>
-      <div class="box-actions">${actions}</div>
-    </div>`;
-  }).join('');
-}
-
-async function borrowBox(boxId) {
-  if (!selectedClassId) { showToast('請先選擇班級', 'error'); return; }
-  const active = getActiveBorrow(selectedClassId);
-  if (active) { showToast('你已有借閱中的書箱，請先歸還', 'error'); return; }
-  const today = localDateStr(new Date());
-
-  const { error } = await window.supabaseClient.from('borrow_records').insert({
-    book_box_id: boxId,
-    class_id: selectedClassId,
-    borrow_date: today,
-    status: 'borrowed'
-  });
-  if (error) { showToast('借閱失敗：' + error.message, 'error'); return; }
-  const dueDate = new Date(); dueDate.setDate(dueDate.getDate() + 14);
-  const dueStr = dueDate.toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' });
-  showToast('借閱成功！到期日：' + dueStr, 'success');
-  await loadData();
-}
-
-async function returnBox(recordId) {
-  if (!confirm('確定歸還這個書箱？')) return;
-  const today = localDateStr(new Date());
-  const { error } = await window.supabaseClient.from('borrow_records')
-    .update({ return_date: today, status: 'returned' })
-    .eq('id', recordId);
-  if (error) { showToast('歸還失敗：' + error.message, 'error'); return; }
-  showToast('歸還成功！', 'success');
-  // Notify queue (fire-and-forget)
-  try {
-    await fetch(`${SUPABASE_URL}/functions/v1/notify_queue`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'UPDATE', table: 'borrow_records', record: { status: 'returned' } })
-    });
-  } catch (e) { console.log('Queue notify skipped:', e); }
-  await loadData();
-}
-
-async function joinQueue(boxId) {
-  if (!selectedClassId) { showToast('請先選擇班級', 'error'); return; }
-  if (isInQueue(selectedClassId, boxId)) { showToast('已經在排隊中了', 'error'); return; }
-  const queue = getQueueForBox(boxId);
-  const nextOrder = queue.length > 0 ? Math.max(...queue.map(q => q.queue_order)) + 1 : 1;
-  const { error } = await window.supabaseClient.from('waiting_queue').insert({
-    book_box_id: boxId,
-    class_id: selectedClassId,
-    queue_order: nextOrder,
-    notified: false
-  });
-  if (error) { showToast('排隊失敗：' + error.message, 'error'); return; }
-  showToast('排隊成功！目前第 ' + nextOrder + ' 順位', 'success');
-  await loadData();
-}
-
-function updateSelection() {
+function confirmClass() {
   const grade = $('gradeSelect').value;
   const cls = $('classSelect').value;
-  if (grade && cls) {
-    const targetName = grade + cls;
-    const found = classes.find(c => c.name === targetName);
-    selectedClassId = found ? found.id : null;
-    setDebug('選擇：' + grade + cls + ' → ' + (found ? '找到班級 id=' + found.id : '找不到班級'));
-  } else {
-    selectedClassId = null;
-    setDebug('請選擇年級和班級');
+  if (!grade || !cls) {
+    alert('請選擇年級和班級');
+    return;
   }
-  renderBoxes();
+  const targetName = grade + cls;
+  const found = classes.find(c => c.name === targetName);
+  if (!found) {
+    alert('找不到班級「' + targetName + '」，請重新整理頁面');
+    return;
+  }
+  selectedClassId = found.id;
+  selectedClassName = found.name;
+  $('selectedClassName').textContent = selectedClassName;
+  
+  // Switch to step 2
+  $('panel-step1').style.display = 'none';
+  $('panel-step2').style.display = 'block';
+  $('step1').className = 'step done';
+  $('step2').className = 'step active';
+  
+  renderBookGrid();
 }
 
-$('gradeSelect').addEventListener('change', updateSelection);
-$('classSelect').addEventListener('change', updateSelection);
+function renderBookGrid() {
+  const grid = $('bookGrid');
+  grid.innerHTML = bookBoxes.map((box, idx) => `
+    <div class="book-item" onclick="toggleBook('${box.id}', this)">
+      <input type="checkbox" id="cb-${idx}" value="${box.id}" onchange="syncCheckbox('${box.id}', this)">
+      <label for="cb-${idx}">${box.name}</label>
+    </div>
+  `).join('');
+}
+
+function toggleBook(boxId, el) {
+  const cb = el.querySelector('input[type="checkbox"]');
+  cb.checked = !cb.checked;
+  syncCheckbox(boxId, cb);
+}
+
+function syncCheckbox(boxId, cb) {
+  if (cb.checked) {
+    if (selectedBooks.size >= 3) {
+      cb.checked = false;
+      alert('最多只能選擇 3 本書');
+      return;
+    }
+    selectedBooks.add(boxId);
+    cb.closest('.book-item').classList.add('selected');
+  } else {
+    selectedBooks.delete(boxId);
+    cb.closest('.book-item').classList.remove('selected');
+  }
+  $('selectedCount').textContent = selectedBooks.size;
+  $('btnSubmit').disabled = selectedBooks.size === 0 || selectedBooks.size > 3;
+}
+
+async function submitSelection() {
+  if (!selectedClassId || selectedBooks.size === 0) return;
+  
+  const inserts = Array.from(selectedBooks).map(bookId => ({
+    class_id: selectedClassId,
+    book_box_id: bookId
+  }));
+  
+  const { error } = await supabaseClient.from('class_book_selections').insert(inserts);
+  if (error) {
+    if (error.message.includes('duplicate key')) {
+      alert('此班級已經登記過這些書了，不可重複登記');
+    } else {
+      alert('登記失敗：' + error.message);
+    }
+    return;
+  }
+  
+  // Show result
+  const selectedNames = bookBoxes
+    .filter(b => selectedBooks.has(b.id))
+    .map(b => `<li>📖 ${b.name}</li>`)
+    .join('');
+  $('resultClassName').textContent = selectedClassName;
+  $('resultList').innerHTML = selectedNames;
+  
+  $('panel-step2').style.display = 'none';
+  $('panel-step3').style.display = 'block';
+  $('step2').className = 'step done';
+  $('step3').className = 'step active';
+}
+
+function resetAll() {
+  selectedClassId = null;
+  selectedClassName = '';
+  selectedBooks = new Set();
+  $('gradeSelect').value = '';
+  $('classSelect').value = '';
+  $('selectedCount').textContent = '0';
+  $('btnSubmit').disabled = true;
+  
+  $('panel-step1').style.display = 'block';
+  $('panel-step2').style.display = 'none';
+  $('panel-step3').style.display = 'none';
+  $('step1').className = 'step active';
+  $('step2').className = 'step';
+  $('step3').className = 'step';
+}
 
 loadData();
-
-// 每 30 秒自動重新整理
-setInterval(loadData, 30000);
 </script>
 </body>
 </html>
