@@ -158,6 +158,7 @@ function localDateStr(d) {
 }
 
 async function loadData() {
+  renderSelects();
   const [boxesRes, classesRes, borrowRes, queueRes] = await Promise.all([
     supabase.from('book_boxes').select('*').order('name'),
     supabase.from('classes').select('*').order('name'),
@@ -169,7 +170,6 @@ async function loadData() {
   classes = classesRes.data || [];
   borrowRecords = borrowRes.data || [];
   waitingQueues = queueRes.data || [];
-  renderSelects();
   renderBoxes();
   renderCurrentStatus();
 }
