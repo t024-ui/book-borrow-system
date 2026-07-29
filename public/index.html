@@ -139,6 +139,10 @@
     <div class="status-card none">請先在上方選擇班級</div>
   </div>
 
+  <div id="debugPanel" style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:12px;margin-bottom:16px;font-size:0.85rem;color:#856404;">
+    <strong>除錯訊息：</strong> <span id="debugMsg">等待資料載入...</span>
+  </div>
+
   <h2 style="font-size:1.1rem; margin-bottom:8px; color:#2d3748;">書箱列表</h2>
   <div class="box-grid" id="boxGrid"></div>
 
@@ -174,8 +178,15 @@ function localDateStr(d) {
   return `${y}-${m}-${day}`;
 }
 
+function setDebug(msg) {
+  const el = $('debugMsg');
+  if (el) el.textContent = msg;
+  console.log('[DEBUG]', msg);
+}
+
 async function loadData() {
   $('currentStatus').innerHTML = '<h2>目前借用</h2><div class="status-card none">載入中...</div>';
+  setDebug('正在連線 Supabase...');
   try {
     const [boxesRes, classesRes, borrowRes, queueRes] = await Promise.all([
       window.supabaseClient.from('book_boxes').select('*').order('name'),
@@ -184,20 +195,21 @@ async function loadData() {
       window.supabaseClient.from('waiting_queue').select('*').order('queue_order')
     ]);
     if (boxesRes.error || classesRes.error) {
-      console.error('DB Error:', boxesRes.error || classesRes.error);
-      $('currentStatus').innerHTML = '<h2>目前借用</h2><div class="status-card none" style="color:#fc8181;">資料載入失敗，請重新整理頁面</div>';
+      setDebug('資料庫錯誤：' + (boxesRes.error?.message || classesRes.error?.message));
+      $('currentStatus').innerHTML = '<h2>目前借用</h2><div class="status-card none" style="color:#fc8181;">資料載入失敗</div>';
       return;
     }
     bookBoxes = boxesRes.data || [];
     classes = classesRes.data || [];
     borrowRecords = borrowRes.data || [];
     waitingQueues = queueRes.data || [];
+    setDebug('載入完成：' + bookBoxes.length + '書箱 / ' + classes.length + '班級 / ' + borrowRecords.length + '借閱 / ' + waitingQueues.length + '排隊');
     updateSelection();
     renderBoxes();
     renderCurrentStatus();
   } catch (err) {
-    console.error('Load error:', err);
-    $('currentStatus').innerHTML = '<h2>目前借用</h2><div class="status-card none" style="color:#fc8181;">連線失敗，請重新整理頁面</div>';
+    setDebug('連線錯誤：' + err.message);
+    $('currentStatus').innerHTML = '<h2>目前借用</h2><div class="status-card none" style="color:#fc8181;">連線失敗</div>';
   }
 }
 
@@ -223,8 +235,14 @@ function getClassById(id) {
 
 function renderCurrentStatus() {
   const el = $('currentStatus');
+  const grade = $('gradeSelect').value;
+  const cls = $('classSelect').value;
   if (!selectedClassId) {
-    el.innerHTML = '<h2>目前借用</h2><div class="status-card none">請先在上方選擇班級</div>';
+    if (grade && cls) {
+      el.innerHTML = '<h2>目前借用</h2><div class="status-card none" style="color:#fc8181;">找不到班級「' + grade + cls + '」，請確認資料已載入</div>';
+    } else {
+      el.innerHTML = '<h2>目前借用</h2><div class="status-card none">請先在上方選擇班級</div>';
+    }
     return;
   }
   const active = getActiveBorrow(selectedClassId);
@@ -382,9 +400,10 @@ function updateSelection() {
     const targetName = grade + cls;
     const found = classes.find(c => c.name === targetName);
     selectedClassId = found ? found.id : null;
-    console.log('Selected grade=' + grade + ', class=' + cls + ', target=' + targetName + ', found=' + (found ? found.name : 'NOT FOUND') + ', classes.length=' + classes.length);
+    setDebug('選擇：' + grade + cls + ' → target=' + targetName + ' found=' + (found ? found.name + ' id=' + found.id : 'NOT FOUND') + ' (classes.length=' + classes.length + ')');
   } else {
     selectedClassId = null;
+    setDebug('請選擇年級和班級 (classes.length=' + classes.length + ')');
   }
   renderCurrentStatus();
   renderBoxes();
