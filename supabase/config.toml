@@ -1,0 +1,24 @@
+[project]
+project_ref = "dwfrqidfhpixqsjmdqzz"
+
+[api]
+enabled = true
+port = 54321
+
+[db.migrations]
+schema_path = "../database"
+
+[functions]
+enabled = true
+verify_jwt = true
+
+[functions."remind_due"]
+verify_jwt = false
+# 每天早上 8 點執行
+schedule = "0 8 * * *"
+
+[functions."notify_queue"]
+verify_jwt = false
+
+[analytics]
+enabled = false
