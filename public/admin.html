@@ -97,7 +97,7 @@
 <script>
 const SUPABASE_URL = 'https://dwfrqidfhpixqsjmdqzz.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR3ZnJxaWRmaHBpeHFzam1kcXp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUyMTkzOTIsImV4cCI6MjEwMDc5NTM5Mn0.E28yPEnnONmNyKb0fRVFmp5K-_jPvf9mq8SK9j7-lN0';
-const supabaseClient = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 function $(id) { return document.getElementById(id); }
 
