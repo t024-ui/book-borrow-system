@@ -100,6 +100,31 @@
     }
     .admin-link a:hover { text-decoration: underline; }
 
+    .stats {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px; margin-bottom: 16px;
+    }
+    .stat-box {
+      background: #ebf8ff; border-radius: 8px; padding: 12px; text-align: center;
+    }
+    .stat-box .num { font-size: 1.4rem; font-weight: 700; color: #4299e1; }
+    .stat-box .label { font-size: 0.8rem; color: #718096; }
+    table {
+      width: 100%; border-collapse: collapse; font-size: 0.9rem;
+    }
+    th, td {
+      padding: 10px 8px; text-align: left; border-bottom: 1px solid #e2e8f0;
+    }
+    th {
+      background: #f7fafc; font-weight: 600; color: #2d3748;
+    }
+    tr:hover { background: #f7fafc; }
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 12px;
+      font-size: 0.75rem; font-weight: 600; margin-right: 4px; margin-bottom: 2px;
+    }
+    .badge-blue { background: #ebf8ff; color: #2b6cb0; }
+
     @media (max-width: 600px) {
       .header h1 { font-size: 1.2rem; }
       .book-grid { grid-template-columns: 1fr; }
@@ -177,7 +202,24 @@
   </div>
 
   <div class="admin-link">
-    <a href="admin.html">📋 管理者查看登記總表</a>
+    <a href="admin.html">管理者查看登記總表</a>
+  </div>
+
+  <div class="card" id="classRegCard" style="display:none;">
+    <h2>各班級登記明細</h2>
+    <div class="stats" id="statsBox"></div>
+    <div style="overflow-x:auto;">
+      <table id="dataTable">
+        <thead>
+          <tr>
+            <th>班級</th>
+            <th>登記書籍</th>
+            <th>登記時間</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
   </div>
 
 </div>
@@ -297,6 +339,7 @@ async function submitSelection() {
   $('panel-step3').style.display = 'block';
   $('step2').className = 'step done';
   $('step3').className = 'step active';
+  loadClassRegistrations();
 }
 
 function resetAll() {
@@ -316,7 +359,48 @@ function resetAll() {
   $('step3').className = 'step';
 }
 
+async function loadClassRegistrations() {
+  try {
+    const { data: selections, error } = await supabaseClient
+      .from('class_book_selections')
+      .select('id, class_id, book_box_id, created_at, classes(name), book_boxes(name)')
+      .order('created_at', { ascending: false });
+    if (error) { console.error(error); return; }
+    if (!selections || selections.length === 0) return;
+
+    $('classRegCard').style.display = 'block';
+
+    const classMap = {};
+    selections.forEach(s => {
+      const clsName = s.classes?.name || '(未知)';
+      if (!classMap[clsName]) classMap[clsName] = { books: [], times: [] };
+      classMap[clsName].books.push(s.book_boxes?.name || '(未知)');
+      classMap[clsName].times.push(new Date(s.created_at).toLocaleString('zh-TW'));
+    });
+
+    const totalClasses = Object.keys(classMap).length;
+    const totalSelections = selections.length;
+    $('statsBox').innerHTML = `
+      <div class="stat-box"><div class="num">${totalClasses}</div><div class="label">登記班級數</div></div>
+      <div class="stat-box"><div class="num">${totalSelections}</div><div class="label">總登記本數</div></div>
+      <div class="stat-box"><div class="num">${(totalSelections / Math.max(totalClasses, 1)).toFixed(1)}</div><div class="label">平均每人本數</div></div>
+    `;
+
+    const tbody = $('dataTable').querySelector('tbody');
+    tbody.innerHTML = Object.entries(classMap).map(([clsName, data]) => `
+      <tr>
+        <td><strong>${clsName}</strong></td>
+        <td>${data.books.map(b => `<span class="badge badge-blue">${b}</span>`).join('')}</td>
+        <td>${data.times[0]}</td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    console.error(err);
+  }
+}
+
 loadData();
+loadClassRegistrations();
 </script>
 </body>
 </html>

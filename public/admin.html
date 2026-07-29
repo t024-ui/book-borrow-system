@@ -58,6 +58,7 @@
     .badge-blue { background: #ebf8ff; color: #2b6cb0; }
     .badge-green { background: #f0fff4; color: #276749; }
     .badge-orange { background: #fffaf0; color: #c05621; }
+    .badge-red { background: #fff5f5; color: #c53030; }
     .seq { display: inline-block; width: 20px; height: 20px; line-height: 20px; border-radius: 50%; background: #4299e1; color: #fff; font-size: 0.7rem; text-align: center; margin-right: 4px; }
     .btn-del {
       display: inline-flex; align-items: center; justify-content: center;
@@ -101,22 +102,6 @@
     </div>
   </div>
 
-  <div class="card">
-    <h2>各班級登記明細</h2>
-    <div style="overflow-x:auto;">
-      <table id="dataTable">
-        <thead>
-          <tr>
-            <th>班級</th>
-            <th>登記書籍</th>
-            <th>登記時間</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-  </div>
-
   <div class="back-link">
     <a href="index.html">← 回到登記頁面</a>
   </div>
@@ -127,6 +112,13 @@
 const SUPABASE_URL = 'https://dwfrqidfhpixqsjmdqzz.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR3ZnJxaWRmaHBpeHFzam1kcXp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUyMTkzOTIsImV4cCI6MjEwMDc5NTM5Mn0.E28yPEnnONmNyKb0fRVFmp5K-_jPvf9mq8SK9j7-lN0';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const ADMIN_PASSWORD = 'admin115';
+
+const pwd = prompt('請輸入管理者密碼：');
+if (pwd !== ADMIN_PASSWORD) {
+  alert('密碼錯誤！');
+  window.location.href = 'index.html';
+}
 
 function $(id) { return document.getElementById(id); }
 
@@ -149,33 +141,16 @@ async function loadData() {
     
     if (error) { console.error(error); return; }
     
-    // Group by class
-    const classMap = {};
-    selections.forEach(s => {
-      const clsName = s.classes?.name || '(未知)';
-      if (!classMap[clsName]) classMap[clsName] = { books: [], times: [] };
-      classMap[clsName].books.push(s.book_boxes?.name || '(未知)');
-      classMap[clsName].times.push(new Date(s.created_at).toLocaleString('zh-TW'));
-    });
-    
     // Stats
-    const totalClasses = Object.keys(classMap).length;
     const totalSelections = selections.length;
+    const allCls = new Set();
+    selections.forEach(s => allCls.add(s.classes?.name || '(未知)'));
+    const totalClasses = allCls.size;
     $('statsBox').innerHTML = `
       <div class="stat-box"><div class="num">${totalClasses}</div><div class="label">登記班級數</div></div>
       <div class="stat-box"><div class="num">${totalSelections}</div><div class="label">總登記本數</div></div>
       <div class="stat-box"><div class="num">${(totalSelections / Math.max(totalClasses, 1)).toFixed(1)}</div><div class="label">平均每人本數</div></div>
     `;
-    
-    // Table - by class
-    const tbody = $('dataTable').querySelector('tbody');
-    tbody.innerHTML = Object.entries(classMap).map(([clsName, data]) => `
-      <tr>
-        <td><strong>${clsName}</strong></td>
-        <td>${data.books.map(b => `<span class="badge badge-blue">${b}</span>`).join('')}</td>
-        <td>${data.times[0]}</td>
-      </tr>
-    `).join('');
     
     // Order table - by book box
     const boxMap = {};
@@ -215,9 +190,8 @@ async function loadData() {
     orderTbody.innerHTML = Object.entries(boxMap).map(([boxName, entries]) => {
       const borrower = borrowerMap[boxName] || '—';
       const clsBadges = entries.map((e, i) => {
-        let badgeClass = 'badge-green';
-        if (i === 0) badgeClass = 'badge-blue';
-        if (i >= 2) badgeClass = 'badge-orange';
+        const isBorrower = e.clsName === borrower;
+        const badgeClass = isBorrower ? 'badge-red' : 'badge-blue';
         return `<span class="badge ${badgeClass}"><span class="seq">${i+1}</span>${e.clsName}<button class="btn-del" onclick="deleteSelection('${e.id}')" title="刪除">×</button></span>`;
       }).join('');
       return `
