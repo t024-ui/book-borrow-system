@@ -311,6 +311,15 @@ function syncCheckbox(boxId, cb) {
 
 async function submitSelection() {
   if (!selectedClassId || selectedBooks.size === 0) return;
+
+  const { count, error: countErr } = await supabaseClient
+    .from('class_book_selections')
+    .select('*', { count: 'exact', head: true })
+    .eq('class_id', selectedClassId);
+  if (!countErr && count + selectedBooks.size > 3) {
+    alert('超過3本，請重新登記');
+    return;
+  }
   
   const inserts = Array.from(selectedBooks).map(bookId => ({
     class_id: selectedClassId,
