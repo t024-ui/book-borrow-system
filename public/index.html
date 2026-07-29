@@ -30,11 +30,6 @@
       border: 1px solid #cbd5e0; border-radius: 8px; background: #fff;
     }
 
-    .current-status {
-      background: #fff; border-radius: 12px; padding: 16px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 16px;
-    }
-    .current-status h2 { font-size: 1.1rem; margin-bottom: 8px; color: #2d3748; }
     .status-card {
       display: flex; align-items: center; justify-content: space-between;
       padding: 12px 16px; border-radius: 8px; flex-wrap: wrap; gap: 8px;
@@ -134,13 +129,8 @@
     </select>
   </div>
 
-  <div class="current-status" id="currentStatus">
-    <h2>目前借用</h2>
-    <div class="status-card none">請先在上方選擇班級</div>
-  </div>
-
   <div id="debugPanel" style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:12px;margin-bottom:16px;font-size:0.85rem;color:#856404;">
-    <strong>除錯訊息：</strong> <span id="debugMsg">等待資料載入...</span>
+    <strong>系統狀態：</strong> <span id="debugMsg">等待資料載入...</span>
   </div>
 
   <h2 style="font-size:1.1rem; margin-bottom:8px; color:#2d3748;">書箱列表</h2>
@@ -185,7 +175,6 @@ function setDebug(msg) {
 }
 
 async function loadData() {
-  $('currentStatus').innerHTML = '<h2>目前借用</h2><div class="status-card none">載入中...</div>';
   setDebug('正在連線 Supabase...');
   try {
     const [boxesRes, classesRes, borrowRes, queueRes] = await Promise.all([
@@ -196,20 +185,17 @@ async function loadData() {
     ]);
     if (boxesRes.error || classesRes.error) {
       setDebug('資料庫錯誤：' + (boxesRes.error?.message || classesRes.error?.message));
-      $('currentStatus').innerHTML = '<h2>目前借用</h2><div class="status-card none" style="color:#fc8181;">資料載入失敗</div>';
       return;
     }
     bookBoxes = boxesRes.data || [];
     classes = classesRes.data || [];
     borrowRecords = borrowRes.data || [];
     waitingQueues = queueRes.data || [];
-    setDebug('載入完成：' + bookBoxes.length + '書箱 / ' + classes.length + '班級 / ' + borrowRecords.length + '借閱 / ' + waitingQueues.length + '排隊');
+    setDebug('載入完成：' + bookBoxes.length + '書箱 / ' + classes.length + '班級');
     updateSelection();
     renderBoxes();
-    renderCurrentStatus();
   } catch (err) {
     setDebug('連線錯誤：' + err.message);
-    $('currentStatus').innerHTML = '<h2>目前借用</h2><div class="status-card none" style="color:#fc8181;">連線失敗</div>';
   }
 }
 
@@ -231,33 +217,6 @@ function isInQueue(classId, boxId) {
 
 function getClassById(id) {
   return classes.find(c => c.id === id);
-}
-
-function renderCurrentStatus() {
-  const el = $('currentStatus');
-  const grade = $('gradeSelect').value;
-  const cls = $('classSelect').value;
-  if (!selectedClassId) {
-    if (grade && cls) {
-      el.innerHTML = '<h2>目前借用</h2><div class="status-card none" style="color:#fc8181;">找不到班級「' + grade + cls + '」，請確認資料已載入</div>';
-    } else {
-      el.innerHTML = '<h2>目前借用</h2><div class="status-card none">請先在上方選擇班級</div>';
-    }
-    return;
-  }
-  const active = getActiveBorrow(selectedClassId);
-  const cls = getClassById(selectedClassId);
-  if (!active) {
-    el.innerHTML = `<h2>${cls.name} 目前借用</h2><div class="status-card none">目前沒有借用任何書箱</div>`;
-    return;
-  }
-  const box = bookBoxes.find(b => b.id === active.book_box_id);
-  const due = new Date(active.due_date).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' });
-  el.innerHTML = `<h2>${cls.name} 目前借用</h2>
-    <div class="status-card borrowed">
-      <span><strong>${box ? box.name : '(已刪除)'}</strong>　到期日：${due}</span>
-      <button class="btn btn-danger btn-sm" onclick="returnBox('${active.id}')">歸還書箱</button>
-    </div>`;
 }
 
 function renderBoxes() {
@@ -400,12 +359,11 @@ function updateSelection() {
     const targetName = grade + cls;
     const found = classes.find(c => c.name === targetName);
     selectedClassId = found ? found.id : null;
-    setDebug('選擇：' + grade + cls + ' → target=' + targetName + ' found=' + (found ? found.name + ' id=' + found.id : 'NOT FOUND') + ' (classes.length=' + classes.length + ')');
+    setDebug('選擇：' + grade + cls + ' → ' + (found ? '找到班級 id=' + found.id : '找不到班級'));
   } else {
     selectedClassId = null;
-    setDebug('請選擇年級和班級 (classes.length=' + classes.length + ')');
+    setDebug('請選擇年級和班級');
   }
-  renderCurrentStatus();
   renderBoxes();
 }
 
