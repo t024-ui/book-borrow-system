@@ -148,7 +148,7 @@
 <script>
 const SUPABASE_URL = 'https://dwfrqidfhpixqsjmdqzz.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR3ZnJxaWRmaHBpeHFzam1kcXp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUyMTkzOTIsImV4cCI6MjEwMDc5NTM5Mn0.E28yPEnnONmNyKb0fRVFmp5K-_jPvf9mq8SK9j7-lN0';
-const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+window.supabaseClient = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let classes = [];
 let bookBoxes = [];
@@ -178,10 +178,10 @@ async function loadData() {
   $('currentStatus').innerHTML = '<h2>目前借用</h2><div class="status-card none">載入中...</div>';
   try {
     const [boxesRes, classesRes, borrowRes, queueRes] = await Promise.all([
-      supabase.from('book_boxes').select('*').order('name'),
-      supabase.from('classes').select('*').order('name'),
-      supabase.from('borrow_records').select('*').order('borrow_date', { ascending: false }),
-      supabase.from('waiting_queue').select('*').order('queue_order')
+      window.supabaseClient.from('book_boxes').select('*').order('name'),
+      window.supabaseClient.from('classes').select('*').order('name'),
+      window.supabaseClient.from('borrow_records').select('*').order('borrow_date', { ascending: false }),
+      window.supabaseClient.from('waiting_queue').select('*').order('queue_order')
     ]);
     if (boxesRes.error || classesRes.error) {
       console.error('DB Error:', boxesRes.error || classesRes.error);
@@ -327,7 +327,7 @@ async function borrowBox(boxId) {
   if (active) { showToast('你已有借閱中的書箱，請先歸還', 'error'); return; }
   const today = localDateStr(new Date());
 
-  const { error } = await supabase.from('borrow_records').insert({
+  const { error } = await window.supabaseClient.from('borrow_records').insert({
     book_box_id: boxId,
     class_id: selectedClassId,
     borrow_date: today,
@@ -343,7 +343,7 @@ async function borrowBox(boxId) {
 async function returnBox(recordId) {
   if (!confirm('確定歸還這個書箱？')) return;
   const today = localDateStr(new Date());
-  const { error } = await supabase.from('borrow_records')
+  const { error } = await window.supabaseClient.from('borrow_records')
     .update({ return_date: today, status: 'returned' })
     .eq('id', recordId);
   if (error) { showToast('歸還失敗：' + error.message, 'error'); return; }
@@ -364,7 +364,7 @@ async function joinQueue(boxId) {
   if (isInQueue(selectedClassId, boxId)) { showToast('已經在排隊中了', 'error'); return; }
   const queue = getQueueForBox(boxId);
   const nextOrder = queue.length > 0 ? Math.max(...queue.map(q => q.queue_order)) + 1 : 1;
-  const { error } = await supabase.from('waiting_queue').insert({
+  const { error } = await window.supabaseClient.from('waiting_queue').insert({
     book_box_id: boxId,
     class_id: selectedClassId,
     queue_order: nextOrder,
