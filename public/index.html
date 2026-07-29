@@ -108,9 +108,12 @@
 <div class="container">
 
   <div class="class-selector">
-    <label for="classSelect">選擇班級</label>
+    <label for="gradeSelect">選擇班級</label>
+    <select id="gradeSelect">
+      <option value="">年級</option>
+    </select>
     <select id="classSelect">
-      <option value="">-- 請選擇班級 --</option>
+      <option value="">班級</option>
     </select>
   </div>
 
@@ -135,6 +138,9 @@ let bookBoxes = [];
 let borrowRecords = [];
 let waitingQueues = [];
 let selectedClassId = null;
+
+const GRADE_NAMES = ['一','二','三','四','五','六'];
+const CLASS_NAMES = ['甲','乙','丙','丁','戊','己','庚','辛','和','平','仁'];
 
 function $(id) { return document.getElementById(id); }
 
@@ -163,17 +169,23 @@ async function loadData() {
   classes = classesRes.data || [];
   borrowRecords = borrowRes.data || [];
   waitingQueues = queueRes.data || [];
-  renderClassSelect();
+  renderSelects();
   renderBoxes();
   renderCurrentStatus();
 }
 
-function renderClassSelect() {
-  const sel = $('classSelect');
-  const currentVal = sel.value;
-  sel.innerHTML = '<option value="">-- 請選擇班級 --</option>' +
-    classes.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-  sel.value = currentVal;
+function renderSelects() {
+  const gs = $('gradeSelect');
+  const currentGrade = gs.value;
+  gs.innerHTML = '<option value="">年級</option>' +
+    GRADE_NAMES.map(g => `<option value="${g}">${g}年級</option>`).join('');
+  gs.value = currentGrade;
+
+  const cs = $('classSelect');
+  const currentClass = cs.value;
+  cs.innerHTML = '<option value="">班級</option>' +
+    CLASS_NAMES.map(c => `<option value="${c}">${c}班</option>`).join('');
+  cs.value = currentClass;
 }
 
 function getActiveBorrow(classId) {
@@ -350,11 +362,21 @@ async function joinQueue(boxId) {
   await loadData();
 }
 
-$('classSelect').addEventListener('change', function() {
-  selectedClassId = this.value || null;
+function updateSelection() {
+  const grade = $('gradeSelect').value;
+  const cls = $('classSelect').value;
+  if (grade && cls) {
+    const found = classes.find(c => c.name === grade + cls);
+    selectedClassId = found ? found.id : null;
+  } else {
+    selectedClassId = null;
+  }
   renderCurrentStatus();
   renderBoxes();
-});
+}
+
+$('gradeSelect').addEventListener('change', updateSelection);
+$('classSelect').addEventListener('change', updateSelection);
 
 loadData();
 
